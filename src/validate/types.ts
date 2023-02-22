@@ -2,7 +2,6 @@ import { SchemaValidator } from "./";
 
 import {
   DirectiveNode,
-  DocumentNode,
   EnumTypeDefinitionNode,
   InputObjectTypeDefinitionNode,
   InputValueDefinitionNode,
@@ -13,7 +12,6 @@ import {
   StringValueNode,
   UnionTypeDefinitionNode,
 } from "graphql";
-import { getSchemaCycles } from "@dorgjelli/graphql-schema-cycles";
 import { isModuleType, isScalarType } from "../extractors/utils";
 import { scalarTypeSet } from "@polywrap/abi-types/build/definitions";
 
@@ -201,36 +199,3 @@ export const getPropertyTypesValidator = (): SchemaValidator => {
     },
   };
 };
-
-export function getCircularDefinitionsValidator(): SchemaValidator {
-  const ignoreTypeNames: string[] = [];
-
-  return {
-    visitor: {
-      enter: {
-        ObjectTypeDefinition: (node: ObjectTypeDefinitionNode) => {
-          if (
-            node.name.value === "Module" ||
-            node.name.value.endsWith("_Module")
-          ) {
-            ignoreTypeNames.push(node.name.value);
-          }
-        },
-      },
-    },
-    cleanup: (documentNode: DocumentNode) => {
-      const { cycleStrings, foundCycle } = getSchemaCycles(documentNode, {
-        ignoreTypeNames,
-        allowOnNullableFields: true,
-      });
-
-      if (foundCycle) {
-        throw Error(
-          `Graphql cycles are not supported. \nFound: ${cycleStrings.map(
-            (cycle) => `\n- ${cycle}`
-          )}`
-        );
-      }
-    },
-  };
-}
