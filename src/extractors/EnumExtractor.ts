@@ -1,9 +1,8 @@
-import { Abi } from "@polywrap/schema-parse/build/definitions";
-import { EnumDef } from "@polywrap/schema-parse/build/definitions";
+import { Abi, EnumDef } from "@polywrap/abi-types";
 import { ASTVisitor, EnumTypeDefinitionNode } from "graphql";
 import { ExtractorVisitorBuilder } from "./types";
 
-export const enumVisitorBuilder: ExtractorVisitorBuilder = {
+export class EnumVisitorBuilder implements ExtractorVisitorBuilder {
   build(abi: Abi): ASTVisitor {
     return {
       enter: {

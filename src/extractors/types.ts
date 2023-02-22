@@ -1,4 +1,4 @@
-import { Abi } from "@polywrap/schema-parse/build/definitions";
+import { Abi } from "@polywrap/abi-types";
 import { ASTVisitor } from "graphql";
 
 export interface ExtractorVisitorBuilder {

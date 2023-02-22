@@ -1,5 +1,5 @@
+import { UniqueDefKind, MapType } from "@polywrap/abi-types";
 import { DirectiveNode, FieldDefinitionNode } from "graphql";
-import { MapType, UniqueDefKind } from "../definitions";
 import { parseMapString } from "./utils";
 
 export const parseDirectivesInField = (node: FieldDefinitionNode, uniqueDefs: Map<string, UniqueDefKind>) => {

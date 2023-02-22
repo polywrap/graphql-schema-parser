@@ -1,20 +1,23 @@
-import { isModuleType } from "@polywrap/schema-parse";
-import { UniqueDefKind, PropertyDef, ObjectDef, Abi } from "@polywrap/schema-parse/build/definitions";
+import { UniqueDefKind, PropertyDef, ObjectDef, Abi, isModuleType } from "@polywrap/abi-types";
 import { FieldDefinitionNode, ASTVisitor, ObjectTypeDefinitionNode } from "graphql";
+import { parseDirectivesInField } from "./DirectiveExtractor";
 import { ExtractorVisitorBuilder } from "./types";
+import { extractType } from "./utils";
 
-const extractPropertyDef = (node: FieldDefinitionNode, uniqueDefs: Map<string, UniqueDefKind>): PropertyDef => {
-  const { map } = parseDirectivesInField(node, uniqueDefs)
-
-  return {
-    kind: "Property",
-    name: node.name.value,
-    required: node.type.kind === "NonNullType",
-    type: map ?? extractType(node.type, uniqueDefs)
+export class ObjectVisitorBuilder implements ExtractorVisitorBuilder {
+  constructor(protected readonly uniqueDefs: Map<string, UniqueDefKind>) { }
+  
+  private extractPropertyDef(node: FieldDefinitionNode, uniqueDefs: Map<string, UniqueDefKind>): PropertyDef {
+    const { map } = parseDirectivesInField(node, uniqueDefs)
+  
+    return {
+      kind: "Property",
+      name: node.name.value,
+      required: node.type.kind === "NonNullType",
+      type: map ?? extractType(node.type, uniqueDefs)
+    }
   }
-}
 
-export const objectVisitorBuilder: ExtractorVisitorBuilder = {
   build(abi: Abi): ASTVisitor {
     return {
       enter: {

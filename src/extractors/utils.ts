@@ -1,6 +1,5 @@
-import { DocumentNode, parse, TypeNode, visit } from "graphql";
-import { isModuleType, isScalarType } from "../abi/utils";
-import { UniqueDefKind, RefType, AnyType, MapKeyTypeName, mapKeyTypeSet, MapType, ScalarTypeName, ArrayType, ScalarType } from "../definitions";
+import { UniqueDefKind, AnyType, ScalarTypeName, RefType, ScalarType, ArrayType, MapType, MapKeyTypeName, mapKeyTypeSet } from "@polywrap/abi-types";
+import { isScalarType, TypeNode } from "graphql";
 
 export const extractType = (node: TypeNode, uniqueDefs: Map<string, UniqueDefKind>): AnyType => {
   switch (node.kind) {

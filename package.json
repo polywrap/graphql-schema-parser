@@ -19,8 +19,7 @@
     "test:watch": "jest --watch --passWithNoTests --verbose"
   },
   "dependencies": {
-    "@dorgjelli/graphql-schema-cycles": "1.1.4",
-    "@polywrap/schema-parse": "0.10.0-pre.5",
+    "@polywrap/abi-types": "0.10.0-pre.5",
     "graphql": "15.5.0"
   },
   "devDependencies": {
