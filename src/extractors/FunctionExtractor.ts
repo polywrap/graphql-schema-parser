@@ -1,8 +1,8 @@
-import { UniqueDefKind, FunctionDef, ResultDef, ArgumentDef, Abi, isModuleType } from "@polywrap/abi-types";
+import { UniqueDefKind, FunctionDef, ResultDef, ArgumentDef, Abi } from "@polywrap/abi-types";
 import { ASTVisitor, FieldDefinitionNode, ObjectTypeDefinitionNode } from "graphql";
 import { parseAnnotateDirective, parseDirectivesInField } from "./DirectiveExtractor";
 import { ExtractorVisitorBuilder } from "./types";
-import { extractType } from "./utils";
+import { extractType, isModuleType } from "./utils";
 
 export class FunctionsVisitorBuilder implements ExtractorVisitorBuilder {
   constructor(protected readonly uniqueDefs: Map<string, UniqueDefKind>) { }

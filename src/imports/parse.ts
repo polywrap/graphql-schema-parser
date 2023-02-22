@@ -1,10 +1,9 @@
 import { SYNTAX_REFERENCE } from "./constants";
 import { getDuplicates } from "./utils";
 
-import Path from "path";
 import { ExternalImportStatement, LocalImportStatement } from "@polywrap/abi-types";
 
-function parseExternalImportStrings(
+export function parseExternalImportStrings(
   imports: RegExpMatchArray[]
 ): ExternalImportStatement[] {
   const externalImports: ExternalImportStatement[] = [];
@@ -79,9 +78,8 @@ function parseExternalImportStrings(
   return externalImports;
 }
 
-function parseLocalImportStrings(
-  imports: RegExpMatchArray[],
-  schemaPath: string
+export function parseLocalImportStrings(
+  imports: RegExpMatchArray[]
 ): LocalImportStatement[] {
   const localImports: LocalImportStatement[] = [];
 
@@ -100,7 +98,7 @@ function parseLocalImportStrings(
       // Remove empty strings
       .filter(Boolean);
     const importPath = importStatement[2];
-    const path = Path.join(Path.dirname(schemaPath), importPath);
+    // const path = Path.join(Path.dirname(schemaPath), importPath);
 
     // Make sure the developer does not try to import a dependencies dependency
     const index = importTypes.findIndex((str) => str.indexOf("_") > -1);
@@ -113,7 +111,7 @@ function parseLocalImportStrings(
     localImports.push({
       kind: "local",
       importedTypes: importTypes,
-      uriOrPath: path,
+      uriOrPath: importPath,
     });
   }
 
@@ -128,55 +126,3 @@ function parseLocalImportStrings(
   return localImports;
 }
 
-export function parseImportStatements(
-  schema: string,
-  schemaPath: string
-) {
-  const importKeywordCapture = /^(?:#|""")*import\s/gm;
-  const keywords = [...schema.matchAll(importKeywordCapture)];
-
-  const localImportStatements = parseLocalImportStatements(schema, schemaPath);
-  const externalImportStatements = parseExternalImportStatements(schema);
-
-  const totalStatements =
-    externalImportStatements.length + localImportStatements.length;
-
-  if (keywords.length !== totalStatements) {
-    throw Error(
-      `Invalid import statement found in file ${schemaPath}.\nPlease use one of the following syntaxes...\n${SYNTAX_REFERENCE}`
-    );
-  }
-
-  return {
-    externalImportStatements,
-    localImportStatements,
-  }
-}
-
-export function parseLocalImportStatements(
-  schema: string,
-  schemaPath: string
-) {
-  const localImportCapture = /(?:#|""")*import\s*(?:({[^}]+}|\*))\s*from\s*[\"'`]([^\"'`\s]+)[\"'`]/g;
-  const localImportStatements = [...schema.matchAll(localImportCapture)];
-
-  const localImportsToResolve: LocalImportStatement[] = parseLocalImportStrings(
-    localImportStatements,
-    schemaPath
-  );
-
-  return localImportsToResolve
-}
-
-export function parseExternalImportStatements(
-  schema: string,
-) {
-  const externalImportCapture = /(?:#|""")*import\s*(?:({[^}]+}|\*))\s*into\s*(\w+?)\s*from\s*[\"'`]([^\"'`\s]+)[\"'`]/g;
-  const externalImportStatements = [...schema.matchAll(externalImportCapture)];
-
-  const externalImportsToResolve: ExternalImportStatement[] = parseExternalImportStrings(
-    externalImportStatements
-  );
-
-  return externalImportsToResolve;
-}

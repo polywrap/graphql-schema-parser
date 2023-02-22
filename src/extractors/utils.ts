@@ -1,5 +1,5 @@
-import { UniqueDefKind, AnyType, ScalarTypeName, RefType, ScalarType, ArrayType, MapType, MapKeyTypeName, mapKeyTypeSet } from "@polywrap/abi-types";
-import { isScalarType, TypeNode } from "graphql";
+import { UniqueDefKind, AnyType, ScalarTypeName, RefType, ScalarType, ArrayType, MapType, MapKeyTypeName, mapKeyTypeSet, scalarTypeSet } from "@polywrap/abi-types";
+import { TypeNode } from "graphql";
 
 export const extractType = (node: TypeNode, uniqueDefs: Map<string, UniqueDefKind>): AnyType => {
   switch (node.kind) {
@@ -170,3 +170,24 @@ const isMapKey = (typeName: string): boolean => {
 const isArray = (typeName: string): boolean => {
   return typeName.startsWith("[")
 }
+
+export function isMapKeyType(type: string): boolean {
+  return type in mapKeyTypeSet;
+}
+
+export const MODULE_NAME = "Module";
+
+export function isModuleType(type: string): boolean {
+  return type === MODULE_NAME;
+}
+
+export function isImportedModuleType(type: string): boolean {
+  return type.endsWith(`_${MODULE_NAME}`);
+}
+
+export function isScalarType(type: string): boolean {
+  return type in scalarTypeSet;
+}
+
+export const scalarTypeNames = Object.keys(scalarTypeSet);
+
