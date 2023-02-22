@@ -12,3 +12,7 @@ export const getDuplicates = (array: string[]): string[] => {
 export const fetchExternalSchema = async (uri: string): Promise<string> => {
   throw new Error("Not implemented")
 }
+
+export const fetchLocalSchema = async (uri: string): Promise<string> => {
+  throw new Error("Not implemented")
+}

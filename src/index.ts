@@ -1,54 +1,74 @@
-import { Abi, isModuleType, SchemaParser } from "@polywrap/schema-parse";
-import { UniqueDefKind } from "@polywrap/schema-parse/build/definitions";
+import { Abi, SchemaParser } from "@polywrap/abi-types";
 import { parse, visit } from "graphql";
-import fs from "fs";
-
-import { parseImportStatements } from "./imports/parse";
-import { fetchExternalSchema } from "./imports/utils";
+import { EnumVisitorBuilder } from "./extractors/EnumExtractor";
+import { FunctionsVisitorBuilder } from "./extractors/FunctionExtractor";
+import { ObjectVisitorBuilder } from "./extractors/ObjectExtractor";
 
 export class GraphQLSchemaParser implements SchemaParser {
-  async getImportsTable(schema: string, schemaPath: string) {
-    let importedAbiRegistry = new Map<string, string>();
-
-    const {
-      externalImportStatements,
-      localImportStatements
-    } = parseImportStatements(schema, schemaPath);
-
-    for await (const externalImportStatement of externalImportStatements) {
-      const schemaString = await fetchExternalSchema(externalImportStatement.uri);
-      importedAbiRegistry.set(externalImportStatement.uri, schemaString);
+  async parse(schema: string): Promise<Abi> {
+    const astNode = parse(schema);
+    const defaultExtractors: VisitorBuilder[] = [
+      new ObjectVisitorBuilder(uniqueDefs),
+      new EnumVisitorBuilder(),
+      new FunctionsVisitorBuilder(uniqueDefs)
+    ]
+  
+    // Validate GraphQL Schema
+    if (!options.noValidate) {
+      const validates = options.validators || validators;
+      validate(astNode, validates);
     }
-
-    for (const localImportStatement of localImportStatements) {
-      const localSchemaFileSource = fs.readFileSync(localImportStatement.path, "utf8");
-      importedAbiRegistry.set(localImportStatement.path, localSchemaFileSource);
+  
+    // Extract & Build Abi
+    let info = createAbi();
+  
+    const extracts = options.extractors?.map(extractorBuilder => extractorBuilder(info, uniqueDefs)) ?? defaultExtractors.map(e => e.build(info));
+    extract(astNode, extracts);
+  
+    if (options && options.transforms) {
+      for (const transform of options.transforms) {
+        info = transformAbi(info, transform);
+      }
     }
-
-    return importedAbiRegistry;
+  
+    return {
+      version: "0.2",
+      objects: info.objects?.length ? info.objects : undefined,
+      functions: info.functions?.length ? info.functions : undefined,
+      enums: info.enums?.length ? info.enums : undefined,
+      imports: info.imports?.length ? info.imports : undefined,
+    };
   }
 
-  async getUniqueDefinitionsTable(schema: string) {
-    const document = parse(schema);
-    const uniqueDefs = new Map<string, UniqueDefKind>();
+  async parseExternalImportStatements(schema: string): Promise<ExternalImportStatement[]> {
 
-    visit(document, {
-      ObjectTypeDefinition: (node) => {
-        const name = node.name.value;
+  }
 
-        if (!isModuleType(name)) {
-          uniqueDefs.set(name, "Object")
-        }
-      },
-      EnumTypeDefinition: (node) => {
-        uniqueDefs.set(node.name.value, "Enum")
-      }
-    });
+  async parseLocalImportStatements(schema: string): Promise<LocalImportStatement[]> {
 
-    return uniqueDefs;
-  };
-
-  async parse(schema: string, uniqueDefinitionsTable: Map<string, UniqueDefKind>) {
-    
-  };
+  }
 }
+
+const validate = (
+  astNode: DocumentNode,
+  validators: SchemaValidatorBuilder[]
+) => {
+  const allValidators = validators.map((getValidator) => getValidator());
+  const allVisitors = allValidators.map((x) => x.visitor);
+  const allCleanup = allValidators.map((x) => x.cleanup);
+
+  visit(astNode, visitInParallel(allVisitors));
+
+  for (const cleanup of allCleanup) {
+    if (cleanup) {
+      cleanup(astNode);
+    }
+  }
+};
+
+const extract = (
+  astNode: DocumentNode,
+  extractors: ASTVisitor[]
+) => {
+  visit(astNode, visitInParallel(extractors));
+};

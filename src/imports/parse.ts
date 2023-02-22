@@ -2,19 +2,9 @@ import { SYNTAX_REFERENCE } from "./constants";
 import { getDuplicates } from "./utils";
 
 import Path from "path";
+import { ExternalImportStatement, LocalImportStatement } from "@polywrap/abi-types";
 
-export interface ExternalImportStatement {
-  importedTypes: string[];
-  namespace: string;
-  uri: string;
-}
-
-export interface LocalImportStatement {
-  importedTypes: string[];
-  path: string;
-}
-
-export function parseExternalImports(
+function parseExternalImportStrings(
   imports: RegExpMatchArray[]
 ): ExternalImportStatement[] {
   const externalImports: ExternalImportStatement[] = [];
@@ -56,9 +46,10 @@ export function parseExternalImports(
     const uri = importStatement[3];
 
     externalImports.push({
+      kind: "external",
       importedTypes,
       namespace,
-      uri,
+      uriOrPath: uri,
     });
   }
 
@@ -72,23 +63,23 @@ export function parseExternalImports(
   // Make sure all uris have the same namespace
   const uriToNamespace: Record<string, string> = {};
   for (const ext of externalImports) {
-    if (uriToNamespace[ext.uri]) {
-      if (uriToNamespace[ext.uri] !== ext.namespace) {
+    if (uriToNamespace[ext.uriOrPath]) {
+      if (uriToNamespace[ext.uriOrPath] !== ext.namespace) {
         throw Error(
-          `Imports from a single URI must be imported into the same namespace.\nURI: ${ext.uri
-          }\nNamespace 1: ${ext.namespace}\nNamespace 2: ${uriToNamespace[ext.uri]
+          `Imports from a single URI must be imported into the same namespace.\nURI: ${ext.uriOrPath
+          }\nNamespace 1: ${ext.namespace}\nNamespace 2: ${uriToNamespace[ext.uriOrPath]
           }`
         );
       }
     } else {
-      uriToNamespace[ext.uri] = ext.namespace;
+      uriToNamespace[ext.uriOrPath] = ext.namespace;
     }
   }
 
   return externalImports;
 }
 
-export function parseLocalImports(
+function parseLocalImportStrings(
   imports: RegExpMatchArray[],
   schemaPath: string
 ): LocalImportStatement[] {
@@ -120,8 +111,9 @@ export function parseLocalImports(
     }
 
     localImports.push({
+      kind: "local",
       importedTypes: importTypes,
-      path,
+      uriOrPath: path,
     });
   }
 
@@ -141,12 +133,11 @@ export function parseImportStatements(
   schemaPath: string
 ) {
   const importKeywordCapture = /^(?:#|""")*import\s/gm;
-  const externalImportCapture = /(?:#|""")*import\s*(?:({[^}]+}|\*))\s*into\s*(\w+?)\s*from\s*[\"'`]([^\"'`\s]+)[\"'`]/g;
-  const localImportCapture = /(?:#|""")*import\s*(?:({[^}]+}|\*))\s*from\s*[\"'`]([^\"'`\s]+)[\"'`]/g;
-
   const keywords = [...schema.matchAll(importKeywordCapture)];
-  const externalImportStatements = [...schema.matchAll(externalImportCapture)];
-  const localImportStatements = [...schema.matchAll(localImportCapture)];
+
+  const localImportStatements = parseLocalImportStatements(schema, schemaPath);
+  const externalImportStatements = parseExternalImportStatements(schema);
+
   const totalStatements =
     externalImportStatements.length + localImportStatements.length;
 
@@ -156,41 +147,34 @@ export function parseImportStatements(
     );
   }
 
-  const externalImportsToResolve: ExternalImportStatement[] = parseExternalImports(
-    externalImportStatements
-  );
+  return {
+    externalImportStatements,
+    localImportStatements,
+  }
+}
 
-  const localImportsToResolve: LocalImportStatement[] = parseLocalImports(
+export function parseLocalImportStatements(
+  schema: string,
+  schemaPath: string
+) {
+  const localImportCapture = /(?:#|""")*import\s*(?:({[^}]+}|\*))\s*from\s*[\"'`]([^\"'`\s]+)[\"'`]/g;
+  const localImportStatements = [...schema.matchAll(localImportCapture)];
+
+  const localImportsToResolve: LocalImportStatement[] = parseLocalImportStrings(
     localImportStatements,
     schemaPath
   );
 
-  return {
-    externalImportStatements: externalImportsToResolve,
-    localImportStatements: localImportsToResolve,
-  }
+  return localImportsToResolve
 }
 
 export function parseExternalImportStatements(
   schema: string,
 ) {
-  const importKeywordCapture = /^(?:#|""")*import\s/gm;
   const externalImportCapture = /(?:#|""")*import\s*(?:({[^}]+}|\*))\s*into\s*(\w+?)\s*from\s*[\"'`]([^\"'`\s]+)[\"'`]/g;
-  const localImportCapture = /(?:#|""")*import\s*(?:({[^}]+}|\*))\s*from\s*[\"'`]([^\"'`\s]+)[\"'`]/g;
-
-  const keywords = [...schema.matchAll(importKeywordCapture)];
   const externalImportStatements = [...schema.matchAll(externalImportCapture)];
-  const localImportStatements = [...schema.matchAll(localImportCapture)];
-  const totalStatements =
-    externalImportStatements.length + localImportStatements.length;
 
-  if (keywords.length !== totalStatements) {
-    throw Error(
-      `Invalid import statement found in file.\nPlease use one of the following syntaxes...\n${SYNTAX_REFERENCE}`
-    );
-  }
-
-  const externalImportsToResolve: ExternalImportStatement[] = parseExternalImports(
+  const externalImportsToResolve: ExternalImportStatement[] = parseExternalImportStrings(
     externalImportStatements
   );
 
